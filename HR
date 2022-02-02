@@ -1,0 +1,520 @@
+# We start with importing modules
+
+import numpy as np
+import pandas as pd
+import csv
+import matplotlib as plt
+from matplotlib.pyplot import figure
+import seaborn as sns
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objs as go
+
+
+data = pd.read_csv('C:/Users/intel/Desktop/data/aug_train.csv') # Dataset is imported in python with name "data"
+
+
+print(data.head(5)) # code to see the first 5 rows of data
+
+   enrollee_id      city  city_development_index gender  \
+0         8949  city_103                   0.920   Male   
+1        29725   city_40                   0.776   Male   
+2        11561   city_21                   0.624    NaN   
+3        33241  city_115                   0.789    NaN   
+4          666  city_162                   0.767   Male   
+
+       relevent_experience enrolled_university education_level  \
+0  Has relevent experience       no_enrollment        Graduate   
+1   No relevent experience       no_enrollment        Graduate   
+2   No relevent experience    Full time course        Graduate   
+3   No relevent experience                 NaN        Graduate   
+4  Has relevent experience       no_enrollment         Masters   
+
+  major_discipline experience company_size    company_type last_new_job  \
+0             STEM        >20          NaN             NaN            1   
+1             STEM         15        50-99         Pvt Ltd           >4   
+2             STEM          5          NaN             NaN        never   
+3  Business Degree         <1          NaN         Pvt Ltd        never   
+4             STEM        >20        50-99  Funded Startup            4   
+
+   training_hours  target  
+0              36       1  
+1              47       0  
+2              83       0  
+3              52       1  
+4               8       0
+ 
+ # This dataset is made of 2 types of data: numerical data and categorical data.
+ # Features: city_development_index,training_hours and target are numerical data.
+ # Features: city, gender, relevent_experience, enrolled_university, education_level, major_discipline, experience, company_size, company_type, last_new_job are categorical data.
+
+print(data.info()) # code to see the information about dataset
+
+ RangeIndex: 19158 entries, 0 to 19157
+ Data columns (total 14 columns):
+  #   Column                  Non-Null Count  Dtype  
+ ---  ------                  --------------  -----  
+  0   enrollee_id             19158 non-null  int64  
+  1   city                    19158 non-null  object 
+  2   city_development_index  19158 non-null  float64
+  3   gender                  14650 non-null  object 
+  4   relevent_experience     19158 non-null  object 
+  5   enrolled_university     18772 non-null  object 
+  6   education_level         18698 non-null  object 
+  7   major_discipline        16345 non-null  object 
+  8   experience              19093 non-null  object 
+  9   company_size            13220 non-null  object 
+  10  company_type            13018 non-null  object 
+  11  last_new_job            18735 non-null  object 
+  12  training_hours          19158 non-null  int64  
+  13  target                  19158 non-null  int64  
+
+ # We see that we have 14 features. Most of the features are object type of data. In this dataset we have 19158 data entries.
+
+
+data.shape  # code to check number of entries and number of features
+(19158, 14) 
+
+ # We have confirmed that in this dataset we have 19158 data entries and 14 features.
+
+
+ # 1. Handle missing values (please explain in the comments the reasoning behind the approach you took)
+
+print(data.isnull().sum())  # Code used to check which columns have a missing values
+
+enrollee_id                  0
+city                         0
+city_development_index       0
+gender                    4508
+relevent_experience          0
+enrolled_university        386
+education_level            460
+major_discipline          2813
+experience                  65
+company_size              5938
+company_type              6140  # Biggest number of missing data is in the "company_type" feature
+last_new_job               423
+training_hours               0
+target                       0
+
+ # From this we can see that the features: gender,enrolled_university,education_level, major_discipline, experience, company_size, company_type, last_new_job have a missing values 
+ # The method for missing values that we use is deleting the rows that have a missing values. We choose this method because we have a large amount of data so losing data will be a lesser problem.
+ # In the article ("https://www.analyticsvidhya.com/blog/2021/05/dealing-with-missing-values-in-python-a-complete-guide/") the best modela was gained when missing values were deleted.
+
+
+cleaned_data = data.dropna(axis = 0) # Code to make a new variable "cleaned_data" that has no missing values
+
+print(cleaned_data.isnull().sum()) # Code to check do we have any missing values left
+
+enrollee_id               0
+city                      0
+city_development_index    0
+gender                    0
+relevent_experience       0
+enrolled_university       0
+education_level           0
+major_discipline          0
+experience                0
+company_size              0
+company_type              0
+last_new_job              0
+training_hours            0
+target                    0
+
+ # We see that we no longer have missing values in our dataset
+
+cleaned_data.info() # Code to see information about daatset
+
+Int64Index: 8955 entries, 1 to 19155
+Data columns (total 14 columns):
+ #   Column                  Non-Null Count  Dtype  
+---  ------                  --------------  -----  
+ 0   enrollee_id             8955 non-null   int64  
+ 1   city                    8955 non-null   object 
+ 2   city_development_index  8955 non-null   float64
+ 3   gender                  8955 non-null   object 
+ 4   relevent_experience     8955 non-null   object 
+ 5   enrolled_university     8955 non-null   object 
+ 6   education_level         8955 non-null   object 
+ 7   major_discipline        8955 non-null   object 
+ 8   experience              8955 non-null   object 
+ 9   company_size            8955 non-null   object 
+ 10  company_type            8955 non-null   object 
+ 11  last_new_job            8955 non-null   object 
+ 12  training_hours          8955 non-null   int64  
+ 13  target                  8955 non-null   int64  
+
+
+ # From this we see that now we have 8955 data entries in dataset
+
+
+ # 1.b) We have to deal with categorical data. After reaserch we decided to use Label Encoding method. With this method we will have same number of features.
+ # But all categorical data in a column will be converted to a number. Numerical labels are always between 0 and n_categories-1. 
+ # ("https://www.datacamp.com/community/tutorials/categorical-data") source
+ 
+ 
+from sklearn.preprocessing import LabelEncoder # We import LabelEncoder modul
+
+le = LabelEncoder() # creting a variable to activate modul
+
+le_city = le.fit_transform(cleaned_data[["city"]])  # labelencode feature "city"
+new_data = updated_data.drop("city",axis="columns") # creating a new variable "new_data" that will have features with LabelEncoder
+new_data["city"] = le_city                          
+
+ # we do the same thing for rest of categorical data
+ 
+le_gender = le.fit_transform(new_data[["gender"]])
+new_data = new_data.drop("gender",axis="columns")
+new_data["gender"] = le_gender
+
+le_relevent_experience = le.fit_transform(new_data[["relevent_experience"]])
+new_data = new_data.drop("relevent_experience",axis="columns")
+new_data["relevent_experience"] = le_relevent_experience
+
+le_enrolled_university = le.fit_transform(new_data[["enrolled_university"]])
+new_data = new_data.drop("enrolled_university",axis="columns")
+new_data["enrolled_university"] = le_enrolled_university
+
+le_education_level = le.fit_transform(new_data[["education_level"]])
+new_data = new_data.drop("education_level",axis="columns")
+new_data["education_level"] = le_education_level
+
+le_major_discipline = le.fit_transform(new_data[["major_discipline"]])
+new_data = new_data.drop("major_discipline",axis="columns")
+new_data["major_discipline"] = le_major_discipline
+
+le_company_type = le.fit_transform(new_data[["company_type"]])
+new_data = new_data.drop("company_type",axis="columns")
+new_data["company_type"] = le_company_type
+
+le_last_new_job = le.fit_transform(new_data[["last_new_job"]])
+new_data = new_data.drop("last_new_job",axis="columns")
+new_data["last_new_job"] = le_last_new_job
+
+print(new_data) #  Code we used to create a new variable and append dataset with labelencoding
+
+       enrollee_id  city_development_index  training_hours  target  city  \
+1            29725                   0.776              47       0    72   
+4              666                   0.767               8       0    48   
+7              402                   0.762              18       1    78   
+8            27107                   0.920              46       1     5   
+11           23853                   0.920             108       0     5   
+...            ...                     ...             ...     ...   ...   
+19147        21319                   0.624              52       1    60   
+19149          251                   0.920              36       1     5   
+19150        32313                   0.920              23       0    47   
+19152        29754                   0.920              25       0     5   
+19155        24576                   0.920              44       0     5   
+
+       gender  relevent_experience  enrolled_university  education_level  \
+1           1                    1                    2                0   
+4           1                    0                    2                1   
+7           1                    0                    2                0   
+8           1                    0                    2                0   
+11          1                    0                    2                0   
+...       ...                  ...                  ...              ...   
+19147       1                    1                    0                0   
+19149       1                    0                    2                1   
+19150       0                    0                    2                0   
+19152       0                    0                    2                0   
+19155       1                    0                    2                0   
+
+       major_discipline  company_type  last_new_job  experience  company_size  
+1                     5             5             4           5             3  
+4                     5             1             3           5             3  
+7                     5             5             4           5             6  
+8                     5             5             0           5             3  
+11                    5             5             0           5             5  
+...                 ...           ...           ...         ...           ...  
+19147                 5             5             0           5             0  
+19149                 5             5             0           5             3  
+19150                 5             4             2           5             0  
+19152                 2             1             0           2             7  
+19155                 5             5             3           5             3  
+
+[8955 rows x 14 columns]
+
+ # We see that we no longer have categorical features in data set
+
+new_data.nunique() # Code to see the number of numerical labels after encoding
+
+enrollee_id               8955
+city_development_index      91
+training_hours             241     
+target                       2
+city                       116
+gender                       3
+relevent_experience          2
+enrolled_university          3
+education_level              3
+major_discipline             6
+company_type                 6
+last_new_job                 6
+experience                   6
+company_size                 8
+
+ # With LabelEncoding we have created labels for each unique data in data set.
+ 
+ # 2.a) Do EDA (Exploratory Data Analysis)
+
+ # One of the first step that we can take in describing  data is to do summary statistics 
+ 
+        enrollee_id	city_D_I	training_hours	target	        city	        gender	        relevent_exp	enrolled_uni	edu_level	major_disc	company_type	last_new_job	experience	company_size
+count	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000	8955.000000
+mean	16869.638749	0.844570	65.074930	0.165606	39.695366	0.918928	0.123283	1.755109	0.330207	4.680625	4.236516	1.598213	4.680625	2.882859
+std	9963.804718	0.116178	60.235087	0.371747	33.374897	0.303200	0.328780	0.608916	0.527190	1.005823	1.531628	1.745871	1.005823	2.274253
+min	2.000000	0.448000	1.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+25%	8150.000000	0.794000	23.000000	0.000000	5.000000	1.000000	0.000000	2.000000	0.000000	5.000000	5.000000	0.000000	5.000000	1.000000
+50%	16924.000000	0.910000	47.000000	0.000000	46.000000	1.000000	0.000000	2.000000	0.000000	5.000000	5.000000	1.000000	5.000000	3.000000
+75%	25902.000000	0.920000	88.000000	0.000000	60.000000	1.000000	0.000000	2.000000	1.000000	5.000000	5.000000	4.000000	5.000000	4.000000
+max	33380.000000	0.949000	336.000000	1.000000	115.000000	2.000000	1.000000	2.000000	2.000000	5.000000	5.000000	5.000000	5.000000	7.000000
+![image](https://user-images.githubusercontent.com/98455721/151676367-c5d0758f-add6-476f-8553-0bcdb2649ff6.png)
+ 
+ # We can also represent data with graph for better understanding of data structure.
+
+df_num = data.select_dtypes(exclude=['object'])
+sns.countplot(data=df_num, x='target') # Code for representing the "target" data.
+
+![image](https://user-images.githubusercontent.com/98455721/151677218-79c6c488-f063-4331-a65d-fdcf636a6c85.png)
+
+ # From graph we see that the number of "target""0" - target: 0 – Not looking for job change is dominating the dataset
+
+data['gender'].unique()
+sns.countplot(data =data, x='gender', hue='target') # Code see make graph that will represent data "gender" and data "target"
+
+![image](https://user-images.githubusercontent.com/98455721/151677336-940ec320-c07a-4c16-8745-422282b67934.png)
+
+ # From graph we see that gender "male" is dominating the dataset
+
+ # 2.b) Check how (un)balanced the data and comment on possible effects
+
+new_data['target'].value_counts(1) # Code to check the number of "0" and number of "1"
+
+0    0.834394
+1    0.165606
+
+ # From this we conclude that the number of "0" is significantly higher than the number of "1" which is telling us that we have unbalanced data.
+ # Possible effects of unbalanced data can be that machine learning algorithams produce unsatisfactory classifiers.
+ # Some of the methods for handling the unbalnced data are: Random Under-Sampling, Boosting-Based techniques, XG Boost techniques, SMOTE ("https://www.analyticsvidhya.com/blog/2017/03/imbalanced-data-classification/")
+ 
+ # 2.c) Show the correlation matrix
+
+new_data.corr() # Code for correlation matrix
+![image](https://user-images.githubusercontent.com/98455721/151677935-431ad272-cbea-4b40-b9d2-aa7baf18686a.png)
+
+ # 3.a) Determine which features should be included in the final dataset (comment on the approach and conclusions)
+
+ # The method for features selection i used is filter method ("https://towardsdatascience.com/feature-selection-with-pandas-e3690ad8504b") that is based on Pearson correlation. 
+ # If the correlation between features is higher that 0.8 we can remove one of the variables from dataset so that we dont have a problem with multicolinearity. 
+ 
+figure(figsize=(12, 10), dpi=100)
+sns.heatmap(new_data.corr(), annot=True) # Code for correlation heatmap
+
+![image](https://user-images.githubusercontent.com/98455721/151678361-97f31c9e-3e9d-4c31-ad7d-d00f6216bcb2.png)
+
+ # In the analysis that we have done, there is no correlation higher that 0.8 so we can leave all variables in the model.
+
+ # 3.b). Create a new dataset with the selected cleaned features
+
+ # Because it the dataset we dont have any correlation among features higher that 0.8 we will keep all features. 
+ # Only feature that we will drop is "enrollee_id" because it does not carry any information about data.
+ 
+new_data = new_data.drop('enrollee_id', axis = 1) # Code in which we droped the data "enrollee_id".
+
+ # 4.a) Train at least two models (comment on the model choice)
+
+ # One of the models that i will train is logistic regression. Logistic regression is used for estimating a model in which the dependent variable is categorical. 
+ 
+from sklearn.model_selection import train_test_split # Importing module
+
+X = new_data.drop('target', axis = 1)                                                                                                                                               
+y = new_data['target'] 
+
+ # Creating a variable "X" that will have features: {city_development_index, training_hours,city,gender,relevent_experience,enrolled_university,
+   ducation_level,major_discipline,company_type,last_new_job,experience ,company_size }
+ # Dataset X contains all independent features.
+ 
+ # Creting a variable "y" that is made of "target" feature. Variable "y" is dependent variable.
+
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.25,random_state=0) 
+
+ # With this code we will split the data in two subsets: "training set" and "test set".
+ # Dataset is broken into two parts in a ratio of 75:25. It means 75% data will be used for model training and 25% for model testing.
+ 
+ 
+from sklearn.linear_model import LogisticRegression # Importing the module
+ 
+log_reg = LogisticRegression() # Activating the module
+ 
+log_reg.fit(X_train,y_train)  # Fiting the model with data
+
+y_pred=log_reg.predict(X_test) # Making a prediction
+
+
+from sklearn import metrics # Importing the metrics module
+
+cnf_matrix = metrics.confusion_matrix(y_test, y_pred) # Model evaluation using confusion matrix
+
+cnf_matrix
+
+array([[1834,    7],
+       [ 386,   12]],
+       
+ # The dimension of this matrix is 2*2 because this model is binary classification.Diagonal values represent accurate predictions, while non-diagonal elements are inaccurate predictions. 
+ # In the output, 1834 and 12 are actual predictions, and 389 and 12 are incorrect predictions.
+  
+ # evaluate the model using model evaluation metrics such as accuracy, precision, and recall 
+
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+print("Precision:",metrics.precision_score(y_test, y_pred))
+print("Recall:",metrics.recall_score(y_test, y_pred))
+
+ # Output
+Accuracy: 0.8244752121482805  # classification rate of 82%, considered as good accuracy
+Precision: 0.631578947368421  # Precision is about being precise,how accurate the model is, how often it is correct after model makes prediction. 
+                              # In our prediction case, when your Logistic Regression model predicted , that people are  looking for a job change 63% of the time.
+
+Recall: 0.03015075376884422   # If there are looking for a job in the  test set, Logistic Regression model can identify it 3% of the time.
+
+ # source:("https://www.datacamp.com/community/tutorials/understanding-logistic-regression-python?utm_source=adwords_ppc&utm_medium=cpc&utm_campaignid=1455363063&utm_adgroupid=65083631748&utm_device=c&utm_keyword=&utm_matchtype=&utm_network=g&utm_adpostion=&utm_creative=332602034358&utm_targetid=dsa-429603003980&utm_loc_interest_ms=&utm_loc_physical_ms=20079&gclid=Cj0KCQiAi9mPBhCJARIsAHchl1y_vJZVAwrdHhz2_SUmIK_kzosWgoV1KF6A7a0LZDGd8ulo4zveaWAaAoPOEALw_wcB")
+ 
+ # a) Second model
+  
+ # Second model that we will make is KNN (K-Nearest Neighbors). K is the number of nearest neighbors and the number of neighbors is the core deciding factor.There  is no optimal number of neighbors suits all kind of data sets. 
+ # Generally scientists choose as an odd number if the number of classes is even.
+  
+from sklearn.neighbors import KNeighborsClassifier
+
+model = KNeighborsClassifier(n_neighbors=3) # Number of neighbors it this model is 3
+
+model.fit(X_train,y_train)
+
+print(classification_report(y_test,y_pred))
+# output
+
+                  precision  recall   f1-score  support
+
+           0       0.83      1.00      0.90      1841  # The accuracy of this model is 82%
+           1       0.63      0.03      0.06       398  # The avg precision is 73% 
+                                                       # The avg recall is 51%   
+    accuracy                           0.82      2239
+   macro avg       0.73      0.51      0.48      2239
+weighted avg       0.79      0.82      0.75      2239
+
+
+y_pred = model.predict(X_test)
+cm = confusion_matrix(y_test,y_pred) # Code for confusion matrix
+print(cm)
+
+# output
+[[1698  143]
+ [ 293  105]]
+
+ # Diagonal values represent accurate predictions, while non-diagonal elements are inaccuratepredictions. 
+ #In the output, 1698 and 105 are actual predictions, and 296 and 143 are incorrect predictions
+ 
+ # source:("https://www.datacamp.com/community/tutorials/k-nearest-neighbor-classification-scikit-learn?utm_source=adwords_ppc&utm_medium=cpc&utm_campaignid=1455363063&utm_adgroupid=65083631748&utm_device=c&utm_keyword=&utm_matchtype=&utm_network=g&utm_adpostion=&utm_creative=332602034358&utm_targetid=dsa-429603003980&utm_loc_interest_ms=&utm_loc_physical_ms=20079&gclid=Cj0KCQiAi9mPBhCJARIsAHchl1wfTbPquJrQuTesqm932brTcYevnsj-kNNeGWIKjQQXdQLiMQHrQpEaAmWZEALw_wcB")
+ 
+ 
+ # b. Compare the models against a minimum of three metrics (comment on the metric choice)
+ # The metrics we used are: 
+  
+ # Logistic regression         # K-Nearest Neighbors
+  
+  # Accuracy: 82%               # Accuracy: 82%
+  # Precision: 63%              # Precision: 73%
+  # Recall: 3%                  # Recall: 51%
+  
+ # c. Fine-tune one model with grid search
+ 
+  # Parameters are the variables that are used by the Machine Learning algorithm for predicting the results based on the input historic data.
+  # Hyperparameters are the variables that the user specify usually while building the Machine Learning model.
+  # Grid Search uses a different combination of all the specified hyperparameters and their values and calculates the performance for each combination and selects the best value     for the hyperparameters.
+ 
+grid={"C":np.logspace(-4,4,20), "penalty":["l1","l2"]} # Code for hyperparametars. 
+log_reg=LogisticRegression()
+log_reg_cv=GridSearchCV(log_reg,grid,cv=10)
+log_reg_cv.fit(X_train,y_train)
+
+print("tuned hpyerparameters :(best parameters) ",log_reg_cv.best_params_)
+print("accuracy :",log_reg_cv.best_score_)        # code for printing the information about best parametars and score
+ # output
+tuned hpyerparameters :(best parameters)  {'C': 3792.690190732246, 'penalty': 'l2'}
+accuracy : 0.8415739656518346
+ # The parametars that we will use are: "C":3792 and "penalty":l2
+ # Next we will run new model with parametars we gaind from grid search
+ 
+log_reg2=LogisticRegression(C=3792,penalty="l2")
+log_reg2.fit(X_train,y_train)
+print("score",log_reg2.score(X_test,y_test))
+ # output
+ score 0.8222420723537294 
+ 
+ # source:("https://www.analyticsvidhya.com/blog/2021/06/tune-hyperparameters-with-gridsearchcv/")
+         :("https://www.kaggle.com/funxexcel/p2-logistic-regression-hyperparameter-tuning")
+         :("https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html")
+         :("https://towardsdatascience.com/logistic-regression-model-tuning-with-scikit-learn-part-1-425142e01af5")
+         
+         
+ # d. Perform cross validation and comment on the results
+ 
+ # Cross Validation is a technique which involves reserving a particular sample of a dataset on which you do not train the model.
+ # Here are the steps involved in cross validation: 1. You reserve a sample data set
+                                                    2. Train the model using the remaining part of the dataset
+                                                    3. Use the reserve sample of the test (validation) set. 
+ # K-fold cross-validation is defined as a method for estimating the performance of a model on unseen data.
+ 
+ log_reg.score(X_test,y_test) 
+  0.8244752121482805
+                               # Just comparing this two models we can say that logistic model is better
+ model.score(X_test,y_test) # knn
+  0.8052702099151406
+ 
+
+from sklearn.model_selection import cross_val_score # importing cross validatiom module
+
+# our first model will be K Neighbors Classifier
+train_scores = cross_val_score(KNeighborsClassifier(),X_train,y_train,scoring="accuracy",cv=10) # numbers of data splits in this model is 10
+print(train_scores)
+ # output
+ [0.8452381  0.84077381 0.83184524 0.85267857 0.8422619  0.8452381
+ 0.82414307 0.83308495 0.82861401 0.8390462 ]
+ 
+ train_scores.mean()
+ # output
+ 0.8382923940813285
+ 
+ # second model is Logistic Regression
+ train_scores_log_reg = cross_val_score(LogisticRegression(),X_train,y_train,scoring="accuracy",cv=10)
+ print(train_scores_log_reg)
+  # output
+ [0.83482143 0.83928571 0.8422619  0.83333333 0.83482143 0.83928571
+ 0.8390462  0.84053651 0.8390462  0.84798808]
+ 
+ train_scores_log_reg.mean()
+ # output
+ 0.8390426513377334
+ 
+ # Conclusion after performing cross validation
+ # Logistic Regression : 0.8390426513377334
+ # K Neighbors Classifier : 0.8382923940813285
+ # from this we see that there is not big difference between this two models
+ 
+ # source:("https://machinelearningmastery.com/how-to-configure-k-fold-cross-validation/")
+         :("https://vitalflux.com/k-fold-cross-validation-python-example/")
+         :("https://www.analyticsvidhya.com/blog/2018/05/improve-model-performance-cross-validation-in-python-r/")
+         :("https://scikit-learn.org/stable/modules/cross_validation.html")
+ 
+ # e. Save the best model
+ The model we will save and use is model of logistic regression.
+ 
+ import pickle
+ 
+ with open("log_reg_model.pickle","wb") as f:
+    pickle.dump(log_reg,f)                    # we will save model as "log_reg_model"
+    
+ with open("log_reg_model.pickle","rb") as f:
+    model = pickle.load(f)                    # code to acces the model
+
+
+
